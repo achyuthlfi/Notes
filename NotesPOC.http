@@ -1,0 +1,10 @@
+@NotesPOC_HostAddress = https://localhost:7021
+
+GET {{NotesPOC_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+GET {{NotesPOC_HostAddress}}/weatherforecast
+
+###
