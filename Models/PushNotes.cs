@@ -15,11 +15,11 @@
     }
 
 
-    public class SyncResponse
+    /*public class SyncResponse
     {
-        public ChangesContainer Changes { get; set; }
+        public PullChange Changes { get; set; }
         public long Timestamp { get; set; }
-    }
+    }*/
 
     public class PushNotesRequest
     {

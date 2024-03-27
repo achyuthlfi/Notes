@@ -25,148 +25,6 @@ namespace NotesPOC.Controllers
             _context = context;
         }
 
-
-        //Add Note
-        [HttpPost("create")]
-        public async Task<ActionResult<List<Note>>> Add(NoteAddRequest note)
-        {
-            var creatTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            var addNote = new Note()
-            {
-                Title = note.Title,
-                Description = note.Description,
-                Status=Created,
-                LastModifiedAt= creatTime,
-                CreatedAt= creatTime,
-            };
-            _context.Notes.Add(addNote);
-            await _context.SaveChangesAsync();
-            return Ok(await _context.Notes.ToListAsync());
-        }
-
-
-        //Get All Notes
-        [HttpGet("getAll")]
-        public async Task<ActionResult<List<Note>>> GetAll()
-        {
-            var notes = await _context.Notes.ToListAsync();
-            return Ok(notes);
-        }
-
-        //Note update
-        [HttpPut("update")]
-        public async Task<ActionResult<List<Note>>> Update(NoteUpdateRequest note)
-        {
-            var getNote = await _context.Notes.FindAsync(note.Id);
-            if (getNote is null)
-            {
-                return NotFound("Note not found");
-            }
-
-            getNote.Title = note.Title;
-            getNote.Description = note.Description;
-            getNote.Status = Updated;
-            getNote.LastModifiedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-
-            await _context.SaveChangesAsync();
-            return Ok(await _context.Notes.ToListAsync());
-        }
-
-        //Get Note by ID
-        [HttpGet("getById/{id}")]
-        public async Task<ActionResult<Note>> GetById(int id)
-        {
-            var note = await _context.Notes.FindAsync(id);
-            if (note is null)
-            {
-                string notFoundRes = "Note didn't found with id: " + id;
-                return NotFound(notFoundRes);
-            }
-            return Ok(note);
-
-        }
-
-        //Delete note
-        [HttpDelete("delete")]
-        public async Task<ActionResult<List<Note>>> Delete(int id)
-        {
-            var note = await _context.Notes.FindAsync(id);
-            if (note is null)
-            {
-                return NotFound("Note found");
-            }
-
-            _context.Notes.Remove(note);
-            await _context.SaveChangesAsync();
-            return Ok(await _context.Notes.ToListAsync());
-        }
-
-        //Pull notes by timestamp
-        [HttpGet("pull/{lastPulledAt}")]
-        public async Task<ActionResult<PullNoteResponse>> PullNotes(long? lastPulledAt)
-        {
-            var currentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-
-            var changedNotes = await _context.Notes
-                                            .Where(n => lastPulledAt == null || n.LastModifiedAt > lastPulledAt.Value)
-                                            .ToListAsync();
-
-            var createdNotes = changedNotes
-                               .Where(n => n.Status == Created)
-                               .Select(n => new NoteAddRequest
-                               {
-                                   Title = n.Title,
-                                   Description = n.Description,
-                                   //CreatedAt = n.CreatedAt
-                               }).ToList();
-
-            var updatedNotes = changedNotes
-                               .Where(n => n.Status == Updated)
-                               .Select(n => new NoteUpdateRequest
-                               {
-                                   Id = n.Id,
-                                   Title = n.Title,
-                                   Description = n.Description,
-                                   //CreatedAt = n.CreatedAt
-                               }).ToList();
-
-            var deletedNotesIds = changedNotes
-                                  .Where(n => n.Status == Deleted)
-                                  .Select(n => n.Id)
-                                  .ToList();
-
-            /*var response = new PullNotes
-            {
-                Created = createdNotes.Any() ? createdNotes : new List<NoteAddRequest>(),
-                Updated = updatedNotes.Any() ? updatedNotes : new List<NoteUpdateRequest>(),
-                Deleted = deletedNotesIds.Any() ? deletedNotesIds : new List<int>()
-            };*/
-
-            /*var response = new PullNotes
-            {
-                Created = createdNotes,
-                Updated = updatedNotes,
-                Deleted = deletedNotesIds
-            };*/
-
-            var response = new PullNoteResponse
-            {
-                Changes = new ChangesContainer
-                {
-                    Notes = new PullNotes
-                    {
-                        Created = createdNotes,
-                        Updated = updatedNotes,
-                        Deleted = deletedNotesIds
-                    }
-                },
-                LastPulledAt = currentTimestamp
-            };
-
-            return Ok(response);
-
-        }
-
         //Push notes
         [HttpPost("push/{lastPulledAt}")]
         public async Task<ActionResult<PullNoteResponse>> PushNotes(long lastPulledAt, [FromBody] PushNotesRequest request)
@@ -251,5 +109,146 @@ namespace NotesPOC.Controllers
         }
 
 
+        //Pull notes by timestamp
+        [HttpGet("pull/{lastPulledAt}")]
+        public async Task<ActionResult<PullNoteResponse>> PullNotes(long? lastPulledAt)
+        {
+            var currentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            var changedNotes = await _context.Notes
+                                            .Where(n => lastPulledAt == null || n.LastModifiedAt > lastPulledAt.Value)
+                                            .ToListAsync();
+
+            var createdNotes = changedNotes
+                               .Where(n => n.Status == Created)
+                               .Select(n => new PullAddNote
+                               {
+                                   Id = n.Id,
+                                   Title = n.Title,
+                                   Description = n.Description,
+                                   //CreatedAt = n.CreatedAt
+                               }).ToList();
+
+            var updatedNotes = changedNotes
+                               .Where(n => n.Status == Updated)
+                               .Select(n => new NoteUpdateRequest
+                               {
+                                   Id = n.Id,
+                                   Title = n.Title,
+                                   Description = n.Description,
+                                   //CreatedAt = n.CreatedAt
+                               }).ToList();
+
+            var deletedNotesIds = changedNotes
+                                  .Where(n => n.Status == Deleted)
+                                  .Select(n => n.Id)
+                                  .ToList();
+
+            /*var response = new PullNotes
+            {
+                Created = createdNotes.Any() ? createdNotes : new List<NoteAddRequest>(),
+                Updated = updatedNotes.Any() ? updatedNotes : new List<NoteUpdateRequest>(),
+                Deleted = deletedNotesIds.Any() ? deletedNotesIds : new List<int>()
+            };*/
+
+            /*var response = new PullNotes
+            {
+                Created = createdNotes,
+                Updated = updatedNotes,
+                Deleted = deletedNotesIds
+            };*/
+
+            var response = new PullNoteResponse
+            {
+                Changes = new PullChange
+                {
+                    Notes = new PullNotes
+                    {
+                        Created = createdNotes,
+                        Updated = updatedNotes,
+                        Deleted = deletedNotesIds
+                    }
+                },
+                LastPulledAt = currentTimestamp
+            };
+
+            return Ok(response);
+
+        }
+
+        //Add Note
+        [HttpPost("create")]
+        public async Task<ActionResult<List<Note>>> Add(NoteAddRequest note)
+        {
+            var creatTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var addNote = new Note()
+            {
+                Title = note.Title,
+                Description = note.Description,
+                Status=Created,
+                LastModifiedAt= creatTime,
+                CreatedAt= creatTime,
+            };
+            _context.Notes.Add(addNote);
+            await _context.SaveChangesAsync();
+            return Ok(await _context.Notes.ToListAsync());
+        }
+
+
+        //Get All Notes
+        [HttpGet("getAll")]
+        public async Task<ActionResult<List<Note>>> GetAll()
+        {
+            var notes = await _context.Notes.ToListAsync();
+            return Ok(notes);
+        }
+
+        //Note update
+        [HttpPut("update")]
+        public async Task<ActionResult<List<Note>>> Update(NoteUpdateRequest note)
+        {
+            var getNote = await _context.Notes.FindAsync(note.Id);
+            if (getNote is null)
+            {
+                return NotFound("Note not found");
+            }
+
+            getNote.Title = note.Title;
+            getNote.Description = note.Description;
+            getNote.Status = Updated;
+            getNote.LastModifiedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            await _context.SaveChangesAsync();
+            return Ok(await _context.Notes.ToListAsync());
+        }
+
+        //Get Note by ID
+        [HttpGet("getById/{id}")]
+        public async Task<ActionResult<Note>> GetById(int id)
+        {
+            var note = await _context.Notes.FindAsync(id);
+            if (note is null)
+            {
+                string notFoundRes = "Note didn't found with id: " + id;
+                return NotFound(notFoundRes);
+            }
+            return Ok(note);
+
+        }
+
+        //Delete note
+        [HttpDelete("delete")]
+        public async Task<ActionResult<List<Note>>> Delete(int id)
+        {
+            var note = await _context.Notes.FindAsync(id);
+            if (note is null)
+            {
+                return NotFound("Note found");
+            }
+
+            _context.Notes.Remove(note);
+            await _context.SaveChangesAsync();
+            return Ok(await _context.Notes.ToListAsync());
+        }
     }
 }
