@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="..\build\NotesPOC.props" />
-</Project>
