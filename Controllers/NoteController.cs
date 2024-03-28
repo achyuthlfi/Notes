@@ -1,10 +1,14 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Azure.Core;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NotesPOC.Data;
 using NotesPOC.Models;
+using NotesPOC.Services;
+using System.Threading.Channels;
 using System.Threading.Tasks;
+using NotesPOC.Utilities;
 
 namespace NotesPOC.Controllers
 {
@@ -13,167 +17,46 @@ namespace NotesPOC.Controllers
     [Route("api/[controller]")]
     public class NoteController : ControllerBase
     {
-        private const string Created = "created";
-        private const string Updated = "updated";
-        private const string Deleted = "deleted";
         
         private readonly NoteContext _context;
+        private readonly INoteService _noteService;
 
         //DB context
-        public NoteController(NoteContext context)
+        public NoteController(NoteContext context, INoteService noteService)
         {
             _context = context;
+            _noteService = noteService;
         }
 
-        //Push notes
         [HttpPost("push/{lastPulledAt}")]
         public async Task<ActionResult<PullNoteResponse>> PushNotes(long lastPulledAt, [FromBody] PushNotesRequest request)
         {
-            // Assuming you want to return changes up to the current moment after pushing changes
-            var currentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            var changes = request.Changes;
-
-            // Add new notes
-            if (changes.created != null && changes.created.Any())
+            try
             {
-                foreach (var note in changes.created)
-                {
-                    var addNote = new Note
-                    {
-                        Title = note.Title,
-                        Description = note.Description,
-                        Status = Created,
-                        LastModifiedAt = currentTimestamp,
-                        CreatedAt = currentTimestamp
-                    };
-                    _context.Notes.Add(addNote);
-                }
+                var processResult = await _noteService.ProcessPushedNotes(lastPulledAt, request.Changes.notes);
+                return Ok(processResult);
             }
-
-
-            // Update the existing note with the new values
-            if (changes.updated != null && changes.updated.Any())
+            catch (Exception ex)
             {
-                foreach (var note in changes.updated)
-                {
-                    var existingNote = await _context.Notes.FindAsync(note.Id);
-                    if (existingNote != null)
-                    {
-                        existingNote.Title = note.Title;
-                        existingNote.Description = note.Description;
-                        existingNote.Status = Updated;
-                        existingNote.LastModifiedAt = currentTimestamp;
-                    }
-                }
-            }
-
-
-            // Handle Deletions
-            if (changes.deleted != null && changes.deleted.Any())
-            {
-                Console.WriteLine("In side delete");
-                foreach (var noteId in changes.deleted)
-                {
-                    Console.WriteLine("In side delete {0}", noteId);
-                    var noteToDelete = await _context.Notes.FindAsync(noteId);
-                    if (noteToDelete != null)
-                    {
-                        noteToDelete.Status = Deleted;
-                        _context.Entry(noteToDelete).CurrentValues.SetValues(noteToDelete);
-                        noteToDelete.LastModifiedAt = currentTimestamp;
-                    }
-                }
-            }
-
-
-            await _context.SaveChangesAsync();
-
-            // Directly calling PullChanges and returning its result
-            var getNotes = await PullNotes(lastPulledAt);
-
-            //return pullChangesResult.Result;
-            //return Ok(getNotes);
-
-            if (getNotes.Result is OkObjectResult okResult)
-            {
-                // If the result is OkObjectResult, extract its value (which is the actual data)
-                var pullResponse = okResult.Value as PullNoteResponse;
-                // Return this data wrapped in an Ok() to match the response type
-                return Ok(pullResponse);
-            }
-            else
-            {
-                // Handle other cases (e.g., if PullNotes returned a different type of result)
-                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred, While getting notes");
+                Console.WriteLine(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred during the push process." + ex.Message + " :: " + ex.ToString());
             }
         }
 
-
         //Pull notes by timestamp
         [HttpGet("pull/{lastPulledAt}")]
-        public async Task<ActionResult<PullNoteResponse>> PullNotes(long? lastPulledAt)
+        public async Task<ActionResult<PullNoteResponse>> PullNotes(long lastPulledAt)
         {
-            var currentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-
-            var changedNotes = await _context.Notes
-                                            .Where(n => lastPulledAt == null || n.LastModifiedAt > lastPulledAt.Value)
-                                            .ToListAsync();
-
-            var createdNotes = changedNotes
-                               .Where(n => n.Status == Created)
-                               .Select(n => new PullAddNote
-                               {
-                                   Id = n.Id,
-                                   Title = n.Title,
-                                   Description = n.Description,
-                                   //CreatedAt = n.CreatedAt
-                               }).ToList();
-
-            var updatedNotes = changedNotes
-                               .Where(n => n.Status == Updated)
-                               .Select(n => new NoteUpdateRequest
-                               {
-                                   Id = n.Id,
-                                   Title = n.Title,
-                                   Description = n.Description,
-                                   //CreatedAt = n.CreatedAt
-                               }).ToList();
-
-            var deletedNotesIds = changedNotes
-                                  .Where(n => n.Status == Deleted)
-                                  .Select(n => n.Id)
-                                  .ToList();
-
-            /*var response = new PullNotes
+            try
             {
-                Created = createdNotes.Any() ? createdNotes : new List<NoteAddRequest>(),
-                Updated = updatedNotes.Any() ? updatedNotes : new List<NoteUpdateRequest>(),
-                Deleted = deletedNotesIds.Any() ? deletedNotesIds : new List<int>()
-            };*/
-
-            /*var response = new PullNotes
+                var processResult = await _noteService.FetchNotesByLastSync(lastPulledAt);
+                return Ok(processResult);
+            }
+            catch (Exception ex)
             {
-                Created = createdNotes,
-                Updated = updatedNotes,
-                Deleted = deletedNotesIds
-            };*/
-
-            var response = new PullNoteResponse
-            {
-                Changes = new PullChange
-                {
-                    Notes = new PullNotes
-                    {
-                        Created = createdNotes,
-                        Updated = updatedNotes,
-                        Deleted = deletedNotesIds
-                    }
-                },
-                LastPulledAt = currentTimestamp
-            };
-
-            return Ok(response);
-
+                Console.WriteLine(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred during the push process." + ex.Message + " :: " + ex.ToString());
+            }
         }
 
         //Add Note
@@ -185,7 +68,7 @@ namespace NotesPOC.Controllers
             {
                 Title = note.Title,
                 Description = note.Description,
-                Status=Created,
+                Status=AppConstants.Created,
                 LastModifiedAt= creatTime,
                 CreatedAt= creatTime,
             };
@@ -193,7 +76,6 @@ namespace NotesPOC.Controllers
             await _context.SaveChangesAsync();
             return Ok(await _context.Notes.ToListAsync());
         }
-
 
         //Get All Notes
         [HttpGet("getAll")]
@@ -215,7 +97,7 @@ namespace NotesPOC.Controllers
 
             getNote.Title = note.Title;
             getNote.Description = note.Description;
-            getNote.Status = Updated;
+            getNote.Status = AppConstants.Updated;
             getNote.LastModifiedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
             await _context.SaveChangesAsync();

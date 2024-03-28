@@ -1,7 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using NotesPOC.Data;
+using NotesPOC.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+// Register services here
+builder.Services.AddScoped<INoteService, NoteService>();
+builder.Services.AddScoped<IUserService, UserService>();
+
 
 // Add services to the container.
 

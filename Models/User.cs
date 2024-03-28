@@ -41,6 +41,8 @@
         public long LastPulledAt { get; set; }
     }
 
+
+
     public class PullUserChanges
     {
         public PullUsers Users { get; set; }
@@ -62,9 +64,14 @@
         public List<int> deleted { get; set; }
     }
 
+    public class PushUserReq
+    {
+        public PushUsers users { get; set; }
+    }
+
     public class PushUsersRequest
     {
-        public PushUsers Changes { get; set; }
+        public PushUserReq Changes { get; set; }
 
     }
 }

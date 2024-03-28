@@ -1,4 +1,6 @@
-﻿namespace NotesPOC.Models
+﻿using Microsoft.AspNetCore.Mvc;
+
+namespace NotesPOC.Models
 {
     public class PullAddNote
     {

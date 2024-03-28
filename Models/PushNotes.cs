@@ -14,6 +14,10 @@
         public List<int> deleted { get; set; } // Assuming deletion is identified by the Note ID
     }
 
+    public class PushChangeReq
+    {
+        public PushNotes notes { get; set; }
+    }
 
     /*public class SyncResponse
     {
@@ -23,7 +27,7 @@
 
     public class PushNotesRequest
     {
-        public PushNotes Changes { get; set; }
+        public PushChangeReq Changes { get; set; }
 
     }
 }
