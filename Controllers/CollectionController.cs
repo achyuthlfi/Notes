@@ -32,6 +32,8 @@ namespace NotesPOC.Controllers
         {
             var currentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
+            Console.WriteLine("Collection push API called at: "+ currentTimestamp);
+
             PullNoteResponse notesRes = await _noteService.ProcessPushedNotes(lastPulledAt, request.Changes.notes);
             PullUserResponse userRes = await _userService.ProcessPushedUsers(lastPulledAt, request.Changes.users);
 
@@ -55,6 +57,7 @@ namespace NotesPOC.Controllers
         {
             var currentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
+            Console.WriteLine("Collection pull API called at: " + currentTimestamp);
             PullNoteResponse notesRes = await _noteService.FetchNotesByLastSync(lastPulledAt);
             PullUserResponse userRes = await _userService.FetchUsersByLastSync(lastPulledAt);
 
