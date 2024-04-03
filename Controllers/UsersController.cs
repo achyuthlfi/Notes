@@ -65,6 +65,7 @@ namespace NotesPOC.Controllers
             var creatTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             var addUser = new User()
             {
+                ReferenceId = user.Id,
                 Email= user.Email,
                 Password= user.Password,
                 ProfilePic = user.ProfilePic,
@@ -89,7 +90,7 @@ namespace NotesPOC.Controllers
         [HttpPut("update")]
         public async Task<ActionResult<List<User>>> Update(UserUpdateRequest user)
         {
-            var getUser = await _context.Users.FindAsync(user.Id);
+            var getUser = await _context.Users.Where(n => n.ReferenceId == user.Id).FirstOrDefaultAsync();
             if (getUser is null)
             {
                 return NotFound("User not found");
@@ -107,9 +108,9 @@ namespace NotesPOC.Controllers
 
         //Get User by ID
         [HttpGet("getById/{id}")]
-        public async Task<ActionResult<User>> GetById(int id)
+        public async Task<ActionResult<User>> GetById(string id)
         {
-            var user = await _context.Users.FindAsync(id);
+            var user = await _context.Users.Where(n => n.ReferenceId == id).FirstOrDefaultAsync(); ;
             if (user is null)
             {
                 string notFoundRes = "User didn't found with id: " + id;
@@ -121,9 +122,9 @@ namespace NotesPOC.Controllers
 
         //Delete 
         [HttpDelete("delete")]
-        public async Task<ActionResult<List<User>>> Delete(int id)
+        public async Task<ActionResult<List<User>>> Delete(string id)
         {
-            var user = await _context.Users.FindAsync(id);
+            var user = await _context.Users.Where(n => n.ReferenceId == id).FirstOrDefaultAsync();
             if (user is null)
             {
                 return NotFound("User found");

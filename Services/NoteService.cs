@@ -5,6 +5,7 @@ using NotesPOC.Data;
 using NotesPOC.Models;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using NotesPOC.Utilities;
+using Azure.Core;
 
 namespace NotesPOC.Services
 {
@@ -25,15 +26,21 @@ namespace NotesPOC.Services
             {
                 foreach (var note in changes.created)
                 {
-                    var addNote = new Note
-                    {
-                        Title = note.Title,
-                        Description = note.Description,
-                        Status = AppConstants.Created,
-                        LastModifiedAt = currentTimestamp,
-                        CreatedAt = currentTimestamp
-                    };
-                    _context.Notes.Add(addNote);
+                    var noteExited = await _context.Notes.Where(n => n.ReferenceId == note.Id).FirstOrDefaultAsync();
+                    //Console.WriteLine("noteExited", noteExited);
+                    Console.WriteLine($"create note: {Newtonsoft.Json.JsonConvert.SerializeObject(noteExited)}");
+                    if (noteExited == null) {
+                        var addNote = new Note
+                        {
+                            ReferenceId = note.Id,
+                            Title = note.Title,
+                            Description = note.Description,
+                            Status = AppConstants.Created,
+                            LastModifiedAt = currentTimestamp,
+                            CreatedAt = currentTimestamp
+                        };
+                        _context.Notes.Add(addNote);
+                    } 
                 }
             }
 
@@ -42,7 +49,7 @@ namespace NotesPOC.Services
             {
                 foreach (var note in changes.updated)
                 {
-                    var existingNote = await _context.Notes.FindAsync(note.Id);
+                    var existingNote = await _context.Notes.Where(n => n.ReferenceId == note.Id).FirstOrDefaultAsync();
                     if (existingNote != null)
                     {
                         existingNote.Title = note.Title;
@@ -60,7 +67,7 @@ namespace NotesPOC.Services
                 foreach (var noteId in changes.deleted)
                 {
                     Console.WriteLine("In side delete {0}", noteId);
-                    var noteToDelete = await _context.Notes.FindAsync(noteId);
+                    var noteToDelete = await _context.Notes.Where(n => n.ReferenceId == noteId).FirstOrDefaultAsync();
                     if (noteToDelete != null)
                     {
                         noteToDelete.Status = AppConstants.Deleted;
@@ -93,7 +100,7 @@ namespace NotesPOC.Services
                                .Where(n => n.Status == AppConstants.Created)
                                .Select(n => new PullAddNote
                                {
-                                   Id = n.Id,
+                                   Id = n.ReferenceId,
                                    Title = n.Title,
                                    Description = n.Description,
                                    //CreatedAt = n.CreatedAt
@@ -103,7 +110,7 @@ namespace NotesPOC.Services
                                .Where(n => n.Status == AppConstants.Updated)
                                .Select(n => new NoteUpdateRequest
                                {
-                                   Id = n.Id,
+                                   Id = n.ReferenceId,
                                    Title = n.Title,
                                    Description = n.Description,
                                    //CreatedAt = n.CreatedAt
@@ -111,7 +118,7 @@ namespace NotesPOC.Services
 
             var deletedNotesIds = changedNotes
                                   .Where(n => n.Status == AppConstants.Deleted)
-                                  .Select(n => n.Id)
+                                  .Select(n => n.ReferenceId)
                                   .ToList();
 
             var response = new PullNoteResponse

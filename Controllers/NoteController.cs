@@ -66,6 +66,7 @@ namespace NotesPOC.Controllers
             var creatTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             var addNote = new Note()
             {
+                ReferenceId = note.Id,
                 Title = note.Title,
                 Description = note.Description,
                 Status=AppConstants.Created,
@@ -89,7 +90,7 @@ namespace NotesPOC.Controllers
         [HttpPut("update")]
         public async Task<ActionResult<List<Note>>> Update(NoteUpdateRequest note)
         {
-            var getNote = await _context.Notes.FindAsync(note.Id);
+            var getNote = await _context.Notes.Where(n => n.ReferenceId == note.Id).FirstOrDefaultAsync();
             if (getNote is null)
             {
                 return NotFound("Note not found");
@@ -106,9 +107,9 @@ namespace NotesPOC.Controllers
 
         //Get Note by ID
         [HttpGet("getById/{id}")]
-        public async Task<ActionResult<Note>> GetById(int id)
+        public async Task<ActionResult<Note>> GetById(string id)
         {
-            var note = await _context.Notes.FindAsync(id);
+            var note = await _context.Notes.Where(n => n.ReferenceId == id).FirstOrDefaultAsync();
             if (note is null)
             {
                 string notFoundRes = "Note didn't found with id: " + id;
@@ -120,9 +121,9 @@ namespace NotesPOC.Controllers
 
         //Delete note
         [HttpDelete("delete")]
-        public async Task<ActionResult<List<Note>>> Delete(int id)
+        public async Task<ActionResult<List<Note>>> Delete(string id)
         {
-            var note = await _context.Notes.FindAsync(id);
+            var note = await _context.Notes.Where(n => n.ReferenceId == id).FirstOrDefaultAsync(); ;
             if (note is null)
             {
                 return NotFound("Note found");

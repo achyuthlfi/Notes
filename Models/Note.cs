@@ -3,6 +3,7 @@
     public class Note
     {
         public int Id { get; set; }
+        public string ReferenceId { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }
 
@@ -14,6 +15,7 @@
 
     public class NoteAddRequest
     {
+        public string Id { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }
 
@@ -21,7 +23,7 @@
 
     public class NoteUpdateRequest
     {
-        public int Id { get; set; }
+        public string Id { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }
     }

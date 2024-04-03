@@ -26,16 +26,21 @@ namespace NotesPOC.Services
             {
                 foreach (var u in changes.created)
                 {
-                    var addUser = new User
+                    var userExited = await _context.Users.Where(n => n.ReferenceId == u.Id).FirstOrDefaultAsync();
+                    if (userExited == null)
                     {
-                        Email = u.Email,
-                        Password = u.Password,
-                        ProfilePic = u.ProfilePic,
-                        Status = AppConstants.Created,
-                        LastModifiedAt = currentTimestamp,
-                        CreatedAt = currentTimestamp
-                    };
-                    _context.Users.Add(addUser);
+                        var addUser = new User
+                        {
+                            ReferenceId = u.Id,
+                            Email = u.Email,
+                            Password = u.Password,
+                            ProfilePic = u.ProfilePic,
+                            Status = AppConstants.Created,
+                            LastModifiedAt = currentTimestamp,
+                            CreatedAt = currentTimestamp
+                        };
+                        _context.Users.Add(addUser);
+                    }
                 }
             }
 
@@ -44,7 +49,7 @@ namespace NotesPOC.Services
             {
                 foreach (var u in changes.updated)
                 {
-                    var existingUser = await _context.Users.FindAsync(u.Id);
+                    var existingUser = await _context.Users.Where(n => n.ReferenceId == u.Id).FirstOrDefaultAsync();
                     if (existingUser != null)
                     {
                         existingUser.Email = u.Email;
@@ -61,7 +66,7 @@ namespace NotesPOC.Services
             {
                 foreach (var uId in changes.deleted)
                 {
-                    var userToDelete = await _context.Users.FindAsync(uId);
+                    var userToDelete = await _context.Users.Where(n => n.ReferenceId == uId).FirstOrDefaultAsync();
                     if (userToDelete != null)
                     {
                         userToDelete.Status = AppConstants.Deleted;
@@ -97,7 +102,7 @@ namespace NotesPOC.Services
                                .Where(n => n.Status == AppConstants.Created)
                                .Select(n => new PullAddUser
                                {
-                                   Id = n.Id,
+                                   Id = n.ReferenceId,
                                    Email = n.Email,
                                    Password = n.Password,
                                    ProfilePic = n.ProfilePic
@@ -107,7 +112,7 @@ namespace NotesPOC.Services
                                .Where(n => n.Status == AppConstants.Updated)
                                .Select(n => new UserUpdateRequest
                                {
-                                   Id = n.Id,
+                                   Id = n.ReferenceId,
                                    Email = n.Email,
                                    Password = n.Password,
                                    ProfilePic = n.ProfilePic
@@ -115,7 +120,7 @@ namespace NotesPOC.Services
 
             var deleted = getUSers
                                   .Where(n => n.Status == AppConstants.Deleted)
-                                  .Select(n => n.Id)
+                                  .Select(n => n.ReferenceId)
                                   .ToList();
 
             var response = new PullUserResponse

@@ -4,7 +4,7 @@ namespace NotesPOC.Models
 {
     public class PullAddNote
     {
-        public int Id { get; set; }
+        public string Id { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }
     }
@@ -13,7 +13,7 @@ namespace NotesPOC.Models
     {
         public List<PullAddNote> Created { get; set; }
         public List<NoteUpdateRequest> Updated { get; set; }
-        public List<int> Deleted { get; set; }
+        public List<string> Deleted { get; set; }
     }
 
 

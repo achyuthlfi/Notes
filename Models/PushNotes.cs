@@ -4,14 +4,14 @@
     {
         public List<NoteAddRequest> created { get; set; }
         public List<NoteUpdateRequest> updated { get; set; }
-        public List<int> deleted { get; set; } // Assuming deletion is identified by the Note ID
+        public List<string> deleted { get; set; } // Assuming deletion is identified by the Note ID
     }
 
     public class AddOrEditNotes
     {
         public List<Note> created { get; set; }
         public List<Note> updated { get; set; }
-        public List<int> deleted { get; set; } // Assuming deletion is identified by the Note ID
+        public List<string> deleted { get; set; } // Assuming deletion is identified by the Note ID
     }
 
     public class PushChangeReq

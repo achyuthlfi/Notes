@@ -30,6 +30,7 @@ namespace NotesPOC.Controllers
         [HttpPost("push/{lastPulledAt}")]
         public async Task<ActionResult<collectionPullResponse>> PushCollection(long lastPulledAt, [FromBody] CollectionPushRequest request)
         {
+            Console.WriteLine($"Payload: {Newtonsoft.Json.JsonConvert.SerializeObject(request)}");
             var currentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
             Console.WriteLine("Collection push API called at: "+ currentTimestamp);
